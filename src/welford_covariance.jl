@@ -47,41 +47,49 @@ function update_batch!(wc::WelfordEstimate{T}, X::AbstractVector{<:Real}) where 
     return update_batch!(wc, reshape(X_converted, 1, :))
 end
 
-# Update statistics with a single data point
+# Update statistics with a single data point using Welford's recursion:
+# n_{k+1} = n_k + 1
+# μ_{k+1} = μ_k + (x - μ_k) / n_{k+1}  
+# M2_{k+1} = M2_k + (x - μ_k)(x - μ_{k+1})ᵀ
 function update_single!(wc::WelfordEstimate{T}, x::AbstractVector) where T
-    wc.n += 1
+    # Initialize if needed
+    if wc.n == 0
+        initialize!(wc, length(x))
+    end
     
-    delta = x - wc.mean
-    wc.mean .+= delta ./ wc.n
+    wc.n += 1  # n_{k+1} = n_k + 1
     
-    delta2 = x - wc.mean
-    wc.M2 .+= delta * delta2'
+    delta_k = x - wc.mean  # x - μ_k
+    wc.mean .+= delta_k ./ wc.n  # μ_{k+1} = μ_k + (x - μ_k) / n_{k+1}
+    
+    delta_k_plus_1 = x - wc.mean  # x - μ_{k+1}
+    wc.M2 .+= delta_k * delta_k_plus_1'  # M2_{k+1} = M2_k + (x - μ_k)(x - μ_{k+1})ᵀ
     
     return nothing
 end
 
-# Get the current covariance matrix
+# Get the current covariance matrix: Σ = M2_n / (n - δ) where δ = 1 (sample) or 0 (population)
 function get_covariance(wc::WelfordEstimate{T}; corrected::Bool=true) where T
     if wc.n == 0
         return Matrix{T}(undef, 0, 0)
     end
     
-    ddof = corrected ? 1 : 0
+    ddof = corrected ? 1 : 0  # δ = degrees of freedom correction
     if wc.n <= ddof
         return fill(T(NaN), wc.n_features, wc.n_features)
     end
     
-    return wc.M2 ./ (wc.n - ddof)
+    return wc.M2 ./ (wc.n - ddof)  # Σ_n = M2_n / (n - δ)
 end
 
-# Get the current correlation matrix (standardized covariance)
+# Get the current correlation matrix: R = D⁻¹ΣD⁻¹ where D = diag(√σᵢᵢ)
 function get_correlation(wc::WelfordEstimate{T}) where T
-    cov_matrix = get_covariance(wc)
-    std_devs = sqrt.(diag(cov_matrix))
+    cov_matrix = get_covariance(wc)  # Σ_n
+    std_devs = sqrt.(diag(cov_matrix))  # √σᵢᵢ for i = 1,...,p
     
-    std_devs = replace(x -> x == 0 ? one(T) : x, std_devs)
+    std_devs = replace(x -> x == 0 ? one(T) : x, std_devs)  # Handle zero variance
     
-    return cov_matrix ./ (std_devs * std_devs')
+    return cov_matrix ./ (std_devs * std_devs')  # R = D⁻¹ΣD⁻¹
 end
 
 # Get all computed statistics in one convenient package

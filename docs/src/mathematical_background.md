@@ -24,29 +24,29 @@ For a sequence of $p$-dimensional observations $\mathbf{x}_1, \mathbf{x}_2, \ldo
 - $\boldsymbol{\mu}$: running mean vector $(p \times 1)$  
 - $\mathbf{M}_2$: running sum of outer products matrix $(p \times p)$
 
-### Update Rules
+### Recursive Update Rules
 
-For each new observation $\mathbf{x}_k$:
+For each observation $\mathbf{x}_k$, the algorithm updates the state recursively:
 
-$$n \leftarrow n + 1$$
-$$\boldsymbol{\delta} = \mathbf{x}_k - \boldsymbol{\mu}$$
-$$\boldsymbol{\mu} \leftarrow \boldsymbol{\mu} + \frac{\boldsymbol{\delta}}{n}$$
-$$\mathbf{M}_2 \leftarrow \mathbf{M}_2 + \boldsymbol{\delta}(\mathbf{x}_k - \boldsymbol{\mu})^T$$
+$$n_{k+1} = n_k + 1$$
+$$\boldsymbol{\delta}_k = \mathbf{x}_k - \boldsymbol{\mu}_k$$
+$$\boldsymbol{\mu}_{k+1} = \boldsymbol{\mu}_k + \frac{\boldsymbol{\delta}_k}{n_{k+1}}$$
+$$\mathbf{M}_{2,k+1} = \mathbf{M}_{2,k} + \boldsymbol{\delta}_k(\mathbf{x}_k - \boldsymbol{\mu}_{k+1})^T$$
 
 ### Final Estimates
 
-From the accumulated statistics $(n, \boldsymbol{\mu}, \mathbf{M}_2)$, we can compute:
+From the final accumulated statistics $(n_N, \boldsymbol{\mu}_N, \mathbf{M}_{2,N})$ after $N$ observations, we can compute:
 
-- **Sample covariance**: $\boldsymbol{\Sigma} = \frac{\mathbf{M}_2}{n-1}$ (Bessel's correction)
-- **Population covariance**: $\boldsymbol{\Sigma}_{\text{pop}} = \frac{\mathbf{M}_2}{n}$ 
-- **Sample correlation**: $\mathbf{R} = \mathbf{D}^{-1}\boldsymbol{\Sigma}\mathbf{D}^{-1}$ where $\mathbf{D} = \text{diag}(\sqrt{\sigma_{11}}, \sqrt{\sigma_{22}}, \ldots)$
-- **Individual variances**: $\text{diag}(\boldsymbol{\Sigma}) = (\sigma_1^2, \ldots, \sigma_p^2)$
+- **Sample covariance**: $\boldsymbol{\Sigma}_N = \frac{\mathbf{M}_{2,N}}{n_N-1}$ (Bessel's correction)
+- **Population covariance**: $\boldsymbol{\Sigma}_{N,\text{pop}} = \frac{\mathbf{M}_{2,N}}{n_N}$ 
+- **Sample correlation**: $\mathbf{R}_N = \mathbf{D}_N^{-1}\boldsymbol{\Sigma}_N\mathbf{D}_N^{-1}$ where $\mathbf{D}_N = \text{diag}(\sqrt{\sigma_{11}}, \sqrt{\sigma_{22}}, \ldots)$
+- **Individual variances**: $\text{diag}(\boldsymbol{\Sigma}_N) = (\sigma_{1,N}^2, \ldots, \sigma_{p,N}^2)$
 
 ### Edge Cases
 
-- **Empty estimator** ($n = 0$): Returns empty matrices/vectors
-- **Single sample** ($n = 1$): Sample covariance is undefined (NaN), population covariance is zero matrix
-- **Zero variance**: Correlation computation handles $\sigma_{ii} = 0$ by treating as $\sigma_{ii} = 1$ to avoid division by zero
+- **Empty estimator** ($n_0 = 0$): Returns empty matrices/vectors
+- **Single sample** ($n_1 = 1$): Sample covariance is undefined (NaN), population covariance is zero matrix
+- **Zero variance**: Correlation computation handles $\sigma_{ii,N} = 0$ by treating as $\sigma_{ii,N} = 1$ to avoid division by zero
 
 ### Numerical Stability
 
@@ -64,26 +64,26 @@ Traditional "textbook" variance formula $\sigma^2 = E[X^2] - (E[X])^2$ suffers f
 ### The Merging Problem
 
 Given two sets of statistics computed independently:
-- Stream A: $(n_A, \boldsymbol{\mu}_A, \mathbf{M}_{2A})$ from data $\{x_1, x_2, \ldots, x_{n_A}\}$
-- Stream B: $(n_B, \boldsymbol{\mu}_B, \mathbf{M}_{2B})$ from data $\{y_1, y_2, \ldots, y_{n_B}\}$
+- Stream A: $(n_{A}, \boldsymbol{\mu}_{A}, \mathbf{M}_{2,A})$ from observations $\mathbf{x}_1, \mathbf{x}_2, \ldots, \mathbf{x}_{n_A}$
+- Stream B: $(n_{B}, \boldsymbol{\mu}_{B}, \mathbf{M}_{2,B})$ from observations $\mathbf{y}_1, \mathbf{y}_2, \ldots, \mathbf{y}_{n_B}$
 
-Find the equivalent statistics for the combined dataset $\{x_1, \ldots, x_{n_A}, y_1, \ldots, y_{n_B}\}$.
+Find the equivalent statistics $(n_{A+B}, \boldsymbol{\mu}_{A+B}, \mathbf{M}_{2,A+B})$ for the combined sequence $\mathbf{x}_1, \ldots, \mathbf{x}_{n_A}, \mathbf{y}_1, \ldots, \mathbf{y}_{n_B}$.
 
 ### Chan's Solution
 
 The exact merged statistics are computed as:
 
-$$n_{\text{combined}} = n_A + n_B$$
-$$\boldsymbol{\delta} = \boldsymbol{\mu}_B - \boldsymbol{\mu}_A$$
-$$\boldsymbol{\mu}_{\text{combined}} = \boldsymbol{\mu}_A + \boldsymbol{\delta}\frac{n_B}{n_{\text{combined}}}$$
-$$\mathbf{M}_{2,\text{combined}} = \mathbf{M}_{2A} + \mathbf{M}_{2B} + \boldsymbol{\delta}\boldsymbol{\delta}^T\frac{n_A n_B}{n_{\text{combined}}}$$
+$$n_{A+B} = n_A + n_B$$
+$$\boldsymbol{\delta}_{A,B} = \boldsymbol{\mu}_B - \boldsymbol{\mu}_A$$
+$$\boldsymbol{\mu}_{A+B} = \boldsymbol{\mu}_A + \boldsymbol{\delta}_{A,B}\frac{n_B}{n_{A+B}}$$
+$$\mathbf{M}_{2,A+B} = \mathbf{M}_{2,A} + \mathbf{M}_{2,B} + \boldsymbol{\delta}_{A,B}\boldsymbol{\delta}_{A,B}^T\frac{n_A n_B}{n_{A+B}}$$
 
 ### Algorithm Implementation
 
 The merging process handles several edge cases:
 
-1. **Empty source** ($n_B = 0$): Result equals target ($n_A, \boldsymbol{\mu}_A, \mathbf{M}_{2A}$)
-2. **Empty target** ($n_A = 0$): Target becomes copy of source ($n_B, \boldsymbol{\mu}_B, \mathbf{M}_{2B}$)
+1. **Empty source** ($n_B = 0$): Result equals target $(n_A, \boldsymbol{\mu}_A, \mathbf{M}_{2,A})$
+2. **Empty target** ($n_A = 0$): Target becomes copy of source $(n_B, \boldsymbol{\mu}_B, \mathbf{M}_{2,B})$
 3. **Dimension mismatch**: Throws `DimensionMismatch` if feature counts differ
 4. **Numerical precision**: All operations maintain the numerical stability of underlying Welford updates
 
