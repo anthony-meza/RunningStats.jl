@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Examples · RunningStats.jl</title><meta name="title" content="Examples · RunningStats.jl"/><meta property="og:title" content="Examples · RunningStats.jl"/><meta property="twitter:title" content="Examples · RunningStats.jl"/><meta name="description" content="Documentation for RunningStats.jl."/><meta property="og:description" content="Documentation for RunningStats.jl."/><meta property="twitter:description" content="Documentation for RunningStats.jl."/><meta property="og:url" content="https://anthony-meza.github.io/RunningStats.jl/examples.html"/><meta property="twitter:url" content="https://anthony-meza.github.io/RunningStats.jl/examples.html"/><link rel="canonical" href="https://anthony-meza.github.io/RunningStats.jl/examples.html"/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="index.html">RunningStats.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="index.html">Home</a></li><li><a class="tocitem" href="mathematical_background.html">Mathematical Background</a></li><li><a class="tocitem" href="api.html">API Reference</a></li><li class="is-active"><a class="tocitem" href="examples.html">Examples</a><ul class="internal"><li><a class="tocitem" href="#Basic-Usage"><span>Basic Usage</span></a></li><li><a class="tocitem" href="#Comparing-with-Standard-Julia"><span>Comparing with Standard Julia</span></a></li><li><a class="tocitem" href="#Updating-with-New-Data"><span>Updating with New Data</span></a></li><li><a class="tocitem" href="#Merging-Statistics"><span>Merging Statistics</span></a></li><li><a class="tocitem" href="#Parallel-Processing"><span>Parallel Processing</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="examples.html">Examples</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="examples.html">Examples</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/anthony-meza/RunningStats.jl/blob/main/docs/src/examples.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h1><p>This page provides practical examples of using RunningStats.jl.</p><h2 id="Basic-Usage"><a class="docs-heading-anchor" href="#Basic-Usage">Basic Usage</a><a id="Basic-Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Basic-Usage" title="Permalink"></a></h2><pre><code class="language-julia hljs">using RunningStats
+using Random
+
+# Create an estimator
+estimator = WelfordEstimate()
+
+# Simulate getting data in batches
+Random.seed!(42)
+batch1 = randn(100, 3)  # First batch: 100 rows, 3 columns
+batch2 = randn(50, 3)   # Second batch: 50 more rows
+
+# Process first batch
+stats1 = update_batch!(estimator, batch1)
+println(&quot;Processed $(stats1.count) samples&quot;)
+println(&quot;Current mean: $(round.(stats1.mean, digits=2))&quot;)
+
+# Process second batch - statistics automatically update
+stats2 = update_batch!(estimator, batch2)
+println(&quot;Now processed $(stats2.count) total samples&quot;)
+println(&quot;Updated mean: $(round.(stats2.mean, digits=2))&quot;)</code></pre><h2 id="Comparing-with-Standard-Julia"><a class="docs-heading-anchor" href="#Comparing-with-Standard-Julia">Comparing with Standard Julia</a><a id="Comparing-with-Standard-Julia-1"></a><a class="docs-heading-anchor-permalink" href="#Comparing-with-Standard-Julia" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Statistics
+
+# Generate test data
+data = randn(1000, 3)
+
+# Method 1: Standard Julia (requires storing all data)
+julia_mean = mean(data, dims=1)[:]
+julia_cov = cov(data)
+
+# Method 2: RunningStats (streaming)
+estimator = WelfordEstimate()
+update_batch!(estimator, data)
+running_stats = get_statistics(estimator)
+
+# Compare results - should be identical
+println(&quot;Mean difference: $(maximum(abs.(julia_mean - running_stats.mean)))&quot;)
+println(&quot;Covariance difference: $(maximum(abs.(julia_cov - running_stats.covariance)))&quot;)</code></pre><h2 id="Updating-with-New-Data"><a class="docs-heading-anchor" href="#Updating-with-New-Data">Updating with New Data</a><a id="Updating-with-New-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Updating-with-New-Data" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Suppose new data arrives later...
+new_data = randn(500, 3)
+
+# Standard Julia: Need to combine and recompute everything  
+all_data = vcat(data, new_data)
+julia_mean_updated = mean(all_data, dims=1)[:]
+julia_cov_updated = cov(all_data)
+
+# RunningStats: Just update the existing estimator
+update_batch!(estimator, new_data)
+updated_stats = get_statistics(estimator)
+
+# Results are still identical, but RunningStats never stored the original data!
+println(&quot;Updated mean difference: $(maximum(abs.(julia_mean_updated - updated_stats.mean)))&quot;)</code></pre><h2 id="Merging-Statistics"><a class="docs-heading-anchor" href="#Merging-Statistics">Merging Statistics</a><a id="Merging-Statistics-1"></a><a class="docs-heading-anchor-permalink" href="#Merging-Statistics" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Process data from different sources
+source1 = WelfordEstimate()  
+source2 = WelfordEstimate()
+
+update_batch!(source1, randn(200, 4))
+update_batch!(source2, randn(300, 4))
+
+# Combine the results (two ways)
+combined = merge_estimate(source1, source2)    # Creates new estimator
+merge_estimate!(source1, source2)             # Modifies source1 in-place
+
+stats = get_statistics(combined)
+println(&quot;Combined statistics from $(stats.count) total samples&quot;)</code></pre><h2 id="Parallel-Processing"><a class="docs-heading-anchor" href="#Parallel-Processing">Parallel Processing</a><a id="Parallel-Processing-1"></a><a class="docs-heading-anchor-permalink" href="#Parallel-Processing" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Distributed
+
+# Function to process a data partition
+function process_partition(data_chunk)
+    est = WelfordEstimate()
+    update_batch!(est, data_chunk)
+    return est
+end
+
+# Split data across workers (simulated)
+data_partitions = [randn(250, 3) for _ in 1:4]
+estimator_results = map(process_partition, data_partitions)
+
+# Merge all results
+final_estimator = reduce(merge_estimate, estimator_results)
+final_stats = get_statistics(final_estimator)
+
+println(&quot;Processed $(final_stats.count) samples in parallel&quot;)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="api.html">« API Reference</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.14.1 on <span class="colophon-date" title="Thursday 21 August 2025 15:00">Thursday 21 August 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
