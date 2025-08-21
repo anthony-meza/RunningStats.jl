@@ -3,7 +3,7 @@
 [![Tests](https://github.com/anthony-meza/RunningStats.jl/workflows/CI/badge.svg)](https://github.com/anthony-meza/RunningStats.jl/actions)
 [![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://anthony-meza.github.io/RunningStats.jl/)
 
-A Julia package for streaming statistics computation using Welford's algorithm and Chan's parallel merging. Compute means, covariances, correlations, and variances without storing historical data.
+A Julia package for streaming statistics computation using Welford's algorithm and Chan's parallel merging. Compute means, covariances, correlations, and variances without storing historical data in memory. 
 
 ## Key Features
 
