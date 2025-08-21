@@ -6,9 +6,13 @@ mutable struct WelfordEstimate{T<:AbstractFloat}
     mean::Vector{T}
     M2::Matrix{T}
     n_features::Int
+    # Pre-allocated temporary matrices for batch updates
+    temp_old::Matrix{T}
+    temp_new::Matrix{T}
     
     function WelfordEstimate{T}(n_features::Int=0) where T<:AbstractFloat
-        new{T}(0, Vector{T}(), Matrix{T}(undef, 0, 0), n_features)
+        new{T}(0, Vector{T}(), Matrix{T}(undef, 0, 0), n_features, 
+                Matrix{T}(undef, 0, 0), Matrix{T}(undef, 0, 0))
     end
 end
 
@@ -19,11 +23,14 @@ function initialize!(wc::WelfordEstimate{T}, n_features::Int) where T
     wc.n_features = n_features
     wc.mean = zeros(T, n_features)
     wc.M2 = zeros(T, n_features, n_features)
+    # Initialize temp matrices (will be resized as needed for different batch sizes)
+    wc.temp_old = Matrix{T}(undef, 0, n_features)
+    wc.temp_new = Matrix{T}(undef, 0, n_features)
     return wc
 end
 
 # Update statistics with a batch of data points (most common function) - vectorized
-function update_batch!(wc::WelfordEstimate{T}, X::AbstractMatrix{<:Real}) where T
+@inline function update_batch!(wc::WelfordEstimate{T}, X::AbstractMatrix{<:Real}) where T
     X_converted = convert(Matrix{T}, X)
     n_samples, n_features = size(X_converted)
     
@@ -37,31 +44,32 @@ function update_batch!(wc::WelfordEstimate{T}, X::AbstractMatrix{<:Real}) where 
     old_n = wc.n
     new_n = old_n + n_samples
     
-    # Store old mean for M2 calculation
-    old_mean = copy(wc.mean)
-    
     # Compute batch statistics
     batch_mean = vec(mean(X_converted, dims=1))
     
     # Update running mean using weighted combination
     if old_n == 0
+        # Store old mean before updating (empty case)
+        old_mean = zeros(T, wc.n_features)
         wc.mean .= batch_mean
     else
+        # Store old mean before updating
+        old_mean = copy(wc.mean)
         delta = batch_mean - wc.mean
         wc.mean .+= delta .* (n_samples / new_n)
     end
     
-    # Update M2 matrix using vectorized computation
-    # For each sample x_i: M2 += (x_i - old_mean)(x_i - new_mean)'
+    # Update M2 matrix using in-place BLAS operations for better performance
+    # Create centered matrices 
     X_centered_old = X_converted .- old_mean'  # X - old_mean (n_samples x n_features)
     X_centered_new = X_converted .- wc.mean'   # X - new_mean (n_samples x n_features)
     
-    # Compute batch contribution to M2: sum over samples of outer products
-    wc.M2 .+= X_centered_old' * X_centered_new
+    # Use mul! for in-place matrix multiplication: M2 += X_old' * X_new
+    mul!(wc.M2, X_centered_old', X_centered_new, 1, 1)  # C = α*A*B + β*C, so M2 = 1*X_old'*X_new + 1*M2
     
     wc.n = new_n
     
-    return get_statistics(wc)
+    return nothing
 end
 
 # Update statistics with a single sample (vector input)
