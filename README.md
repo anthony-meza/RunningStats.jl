@@ -20,7 +20,7 @@ This package implements Welford's algorithm for numerically stable online comput
 
 1. **Sample count**: $n \leftarrow n + 1$
 2. **Mean**: $\boldsymbol{\mu} \leftarrow \boldsymbol{\mu} + \frac{\mathbf{x} - \boldsymbol{\mu}}{n}$
-3. **Sum of squared deviations**: $\mathbf{M_2} \leftarrow \mathbf{M_2} + (\mathbf{x} - \boldsymbol{\mu}_{\text{old}})(\mathbf{x} - \boldsymbol{\mu}_{\text{new}})^T$
+3. **Sum of squared deviations**: $\mathbf{M_2} \leftarrow \mathbf{M_2} +$
 4. **Sample covariance**: $\boldsymbol{\Sigma} = \frac{\mathbf{M_2}}{n-1}$
 
 ### Chan's Parallel Algorithm (1983)
