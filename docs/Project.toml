@@ -1,6 +1,5 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-RunningStats = "7c4cc05e-1d3b-4a34-9f3a-0c7e4c4e8b2a"
 
 [compat]
 Documenter = "1"
