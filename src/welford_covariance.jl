@@ -22,7 +22,7 @@ function initialize!(wc::WelfordEstimate{T}, n_features::Int) where T
     return wc
 end
 
-# Update statistics with a batch of data points (most common function)
+# Update statistics with a batch of data points (most common function) - vectorized
 function update_batch!(wc::WelfordEstimate{T}, X::AbstractMatrix{<:Real}) where T
     X_converted = convert(Matrix{T}, X)
     n_samples, n_features = size(X_converted)
@@ -33,10 +33,33 @@ function update_batch!(wc::WelfordEstimate{T}, X::AbstractMatrix{<:Real}) where 
         throw(DimensionMismatch("Expected $(wc.n_features) features, got $n_features"))
     end
     
-    for i in 1:n_samples
-        sample = view(X_converted, i, :)
-        update_single!(wc, sample)
+    # Vectorized implementation using Welford's algorithm for batch updates
+    old_n = wc.n
+    new_n = old_n + n_samples
+    
+    # Store old mean for M2 calculation
+    old_mean = copy(wc.mean)
+    
+    # Compute batch statistics
+    batch_mean = vec(mean(X_converted, dims=1))
+    
+    # Update running mean using weighted combination
+    if old_n == 0
+        wc.mean .= batch_mean
+    else
+        delta = batch_mean - wc.mean
+        wc.mean .+= delta .* (n_samples / new_n)
     end
+    
+    # Update M2 matrix using vectorized computation
+    # For each sample x_i: M2 += (x_i - old_mean)(x_i - new_mean)'
+    X_centered_old = X_converted .- old_mean'  # X - old_mean (n_samples x n_features)
+    X_centered_new = X_converted .- wc.mean'   # X - new_mean (n_samples x n_features)
+    
+    # Compute batch contribution to M2: sum over samples of outer products
+    wc.M2 .+= X_centered_old' * X_centered_new
+    
+    wc.n = new_n
     
     return get_statistics(wc)
 end
