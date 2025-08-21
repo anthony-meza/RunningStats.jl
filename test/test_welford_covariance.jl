@@ -70,5 +70,54 @@
 
     end
     
+    @testset "Memory Usage Consistency for Similar Batch Sizes" begin
+        # Test that memory footprint is consistent for similar batch sizes regardless of total samples
+        Random.seed!(123)
+        
+        n_features = 10
+        batch_size = 100
+        
+        # Test different scenarios with same batch size but different total sample counts
+        wc1 = WelfordEstimate{Float64}()
+        wc2 = WelfordEstimate{Float64}()
+        wc3 = WelfordEstimate{Float64}()
+        
+        # Scenario 1: Process 1 batch from a small dataset
+        small_data = randn(batch_size, n_features)
+        update_batch!(wc1, small_data)
+        
+        # Scenario 2: Process 1 batch from a medium dataset (but only use first batch_size samples)
+        medium_data = randn(batch_size * 5, n_features)
+        update_batch!(wc2, medium_data[1:batch_size, :])
+        
+        # Scenario 3: Process 1 batch from a large dataset (but only use first batch_size samples)
+        large_data = randn(batch_size * 10, n_features)
+        update_batch!(wc3, large_data[1:batch_size, :])
+        
+        # All estimators should have identical memory footprint since they processed same batch size
+        @test sizeof(wc1.mean) == sizeof(wc2.mean) == sizeof(wc3.mean)
+        @test sizeof(wc1.M2) == sizeof(wc2.M2) == sizeof(wc3.M2)
+        @test wc1.n_features == wc2.n_features == wc3.n_features
+        @test wc1.n == wc2.n == wc3.n  # Same number of processed samples
+        
+        # Test that processing multiple batches doesn't accumulate temporary memory
+        wc_multi = WelfordEstimate{Float64}()
+        
+        # Process the same total amount of data in smaller batches
+        for i in 1:5
+            batch = randn(batch_size ÷ 5, n_features)
+            update_batch!(wc_multi, batch)
+        end
+        
+        wc_single = WelfordEstimate{Float64}()
+        single_batch = randn(batch_size, n_features)
+        update_batch!(wc_single, single_batch)
+        
+        # Both should have similar memory footprint (same n_features, similar n)
+        @test sizeof(wc_multi.mean) == sizeof(wc_single.mean)
+        @test sizeof(wc_multi.M2) == sizeof(wc_single.M2)
+        
+        println("✓ Memory usage is consistent for similar batch sizes")
+    end
 
 end

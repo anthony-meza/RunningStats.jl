@@ -1,18 +1,14 @@
 # WelfordEstimate - Streaming statistics estimator using Welford's algorithm
 # Computes means, covariances, correlations, and variances without storing historical samples.
 
-mutable struct WelfordEstimate{T<:AbstractFloat}
+mutable struct WelfordEstimate{T<:Real}
     n::Int
     mean::Vector{T}
     M2::Matrix{T}
     n_features::Int
-    # Pre-allocated temporary matrices for batch updates
-    temp_old::Matrix{T}
-    temp_new::Matrix{T}
     
-    function WelfordEstimate{T}(n_features::Int=0) where T<:AbstractFloat
-        new{T}(0, Vector{T}(), Matrix{T}(undef, 0, 0), n_features, 
-                Matrix{T}(undef, 0, 0), Matrix{T}(undef, 0, 0))
+    function WelfordEstimate{T}(n_features::Int=0) where T<:Real
+        new{T}(0, Vector{T}(), Matrix{T}(undef, 0, 0), n_features)
     end
 end
 
@@ -23,16 +19,12 @@ function initialize!(wc::WelfordEstimate{T}, n_features::Int) where T
     wc.n_features = n_features
     wc.mean = zeros(T, n_features)
     wc.M2 = zeros(T, n_features, n_features)
-    # Initialize temp matrices (will be resized as needed for different batch sizes)
-    wc.temp_old = Matrix{T}(undef, 0, n_features)
-    wc.temp_new = Matrix{T}(undef, 0, n_features)
     return wc
 end
 
 # Update statistics with a batch of data points (most common function) - vectorized
-@inline function update_batch!(wc::WelfordEstimate{T}, X::AbstractMatrix{<:Real}) where T
-    X_converted = convert(Matrix{T}, X)
-    n_samples, n_features = size(X_converted)
+@inline function update_batch!(wc::WelfordEstimate{T}, X::Matrix{T}) where T
+    n_samples, n_features = size(X)
     
     if wc.n == 0
         initialize!(wc, n_features)
@@ -45,7 +37,7 @@ end
     new_n = old_n + n_samples
     
     # Compute batch statistics
-    batch_mean = vec(mean(X_converted, dims=1))
+    batch_mean = vec(mean(X, dims=1))
     
     # Update running mean using weighted combination
     if old_n == 0
@@ -61,8 +53,8 @@ end
     
     # Update M2 matrix using in-place BLAS operations for better performance
     # Create centered matrices 
-    X_centered_old = X_converted .- old_mean'  # X - old_mean (n_samples x n_features)
-    X_centered_new = X_converted .- wc.mean'   # X - new_mean (n_samples x n_features)
+    X_centered_old = X .- old_mean'  # X - old_mean (n_samples x n_features)
+    X_centered_new = X .- wc.mean'   # X - new_mean (n_samples x n_features)
     
     # Use mul! for in-place matrix multiplication: M2 += X_old' * X_new
     mul!(wc.M2, X_centered_old', X_centered_new, 1, 1)  # C = α*A*B + β*C, so M2 = 1*X_old'*X_new + 1*M2
@@ -73,7 +65,7 @@ end
 end
 
 # Update statistics with a single sample (vector input)
-function update_batch!(wc::WelfordEstimate{T}, X::AbstractVector{<:Real}) where T
+function update_batch!(wc::WelfordEstimate{T}, X::Vector{<:Real}) where T
     X_converted = convert(Vector{T}, X)
     return update_batch!(wc, reshape(X_converted, 1, :))
 end
@@ -82,7 +74,7 @@ end
 # n_{k+1} = n_k + 1
 # μ_{k+1} = μ_k + (x - μ_k) / n_{k+1}  
 # M2_{k+1} = M2_k + (x - μ_k)(x - μ_{k+1})ᵀ
-function update_single!(wc::WelfordEstimate{T}, x::AbstractVector) where T
+function update_single!(wc::WelfordEstimate{T}, x::Vector) where T
     # Initialize if needed
     if wc.n == 0
         initialize!(wc, length(x))
